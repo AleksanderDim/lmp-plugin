@@ -2,38 +2,44 @@
     'use strict';
 
     function init() {
-        // 1. ПЕРЕВІРКА: Виведемо повідомлення одразу, щоб ви знали, що код ЗАПУСТИВСЯ
-        setTimeout(function() {
-            if (window.Lampa) {
-                Lampa.Noty.show('UA-Plugin: Код працює, шукаю картку...');
-            }
-        }, 1000);
+        // Повідомлення для впевненості
+        Lampa.Noty.show('UA-Plugin: Шукаю куди вставити кнопку...');
 
-        // 2. ЦИКЛ ПОШУКУ: Шукаємо місце для кнопки кожні пів секунди
+        // Постійний цикл пошуку потрібного місця
         setInterval(function() {
-            // Шукаємо блок кнопок у картці
-            var container = $('.full-start__buttons');
+            // Перевіряємо всі можливі варіанти назв блоків з кнопками в різних версіях Лампи
+            var selectors = [
+                '.full-start__buttons', 
+                '.movie-full__buttons', 
+                '.buttons--full',
+                '.full-buttons'
+            ];
             
+            var container = $(selectors.join(', '));
+            
+            // Якщо знайшли хоча б один і кнопки там ще немає
             if (container.length && !$('.view--ua-online').length) {
-                // Створюємо кнопку
-                var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
+                
+                // Створюємо кнопку з примусовими стилями, щоб її було видно
+                var btn = $('<div class="full-start__button selector view--ua-online" style="margin-bottom: 10px !important;"><span>UA Онлайн</span></div>');
                 
                 // Дія при натисканні
                 btn.on('hover:enter click', function () {
-                    Lampa.Noty.show('Пошук активний!');
+                    Lampa.Noty.show('Пошук скоро буде тут!');
                 });
 
-                // Додаємо в кінець списку кнопок
-                container.append(btn);
-                console.log('UA Online: Button added');
+                // Додаємо на самий початок списку кнопок, щоб не проґавити
+                container.prepend(btn);
+                
+                // Про всяк випадок оновлюємо навігацію Лампи, щоб кнопка стала "клікабельною"
+                Lampa.Controller.enable('full'); 
             }
-        }, 500);
+        }, 1000);
     }
 
-    // Запуск скрипта
     if (window.appready) init();
     else {
         document.addEventListener('appready', init);
-        setTimeout(init, 2000); // Резерв
+        setTimeout(init, 2000);
     }
 })();
