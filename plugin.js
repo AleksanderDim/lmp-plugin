@@ -1,71 +1,35 @@
 (function () {
     'use strict';
 
-    function startPlugin() {
-        console.log('UA Online Plugin: Init start');
+    function init() {
+        // Повідомлення, яке має з'явитися вгорі екрана ПРИ ЗАПУСКУ
+        setTimeout(function() {
+            if (window.Lampa) {
+                Lampa.Noty.show('UA-Plugin: ЗВ’ЯЗОК ВСТАНОВЛЕНО');
+            }
+        }, 2000);
 
-        // Реєстрація компонента
-        Lampa.Component.add('ua_online_mod', function (object) {
-            var network = new Lampa.Reguest();
-            var scroll = new Lampa.Scroll({ mask: true, over: true });
-            var items = [];
-            
-            this.create = function () {
-                var _this = this;
-                this.activity.loader(true);
-                
-                // Для тесту - просто виведемо щось у список
-                setTimeout(function(){
-                    _this.activity.loader(false);
-                    _this.draw([{title: 'Перевірка з'єднань...'}]);
-                }, 500);
-
-                return scroll.render();
-            };
-
-            this.draw = function(data) {
-                scroll.clear();
-                data.forEach(function(item) {
-                    var card = Lampa.Template.get('button', { title: item.title });
-                    scroll.append(card);
-                });
-            };
-        });
-
-        // Функція додавання кнопки
-        var addEntry = function() {
-            if ($('.full-start__buttons').length && !$('.view--ua-online').length) {
+        // Додаємо кнопку
+        Lampa.Listener.follow('full', function (e) {
+            if (e.type == 'complite') {
                 var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
                 
                 btn.on('hover:enter', function () {
-                    Lampa.Activity.push({
-                        url: '',
-                        title: 'UA Онлайн',
-                        component: 'ua_online_mod',
-                        movie: Lampa.Activity.active().card
-                    });
+                    Lampa.Noty.show('Пошук запущено...');
                 });
                 
-                $('.full-start__buttons').append(btn);
-            }
-        };
-
-        // Слухаємо відкриття картки фільму
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type == 'complite') {
-                addEntry();
+                if (!$('.view--ua-online').length) {
+                    $('.full-start__buttons').append(btn);
+                }
             }
         });
-
-        // Повідомлення для перевірки
-        Lampa.Noty.show('UA Онлайн: ПЛАГІН АКТИВОВАНО');
     }
 
-    // Спроба миттєвого запуску
-    try {
-        startPlugin();
-    } catch (e) {
-        console.error('UA Online Plugin Error:', e);
+    // Запуск
+    if (window.appready) init();
+    else {
+        document.addEventListener('appready', init);
+        // Резервний запуск через 3 секунди
+        setTimeout(init, 3000);
     }
-
 })();
