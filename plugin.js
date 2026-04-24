@@ -1,60 +1,39 @@
 (function () {
     'use strict';
 
-    // Офіційний метод реєстрації плагіна в Lampa
-    Lampa.Plugins.add('ua_online_plugin', function (api) {
-        
-        // Функція створення компонента пошуку
-        function startPlugin() {
-            Lampa.Component.add('ua_online_mod', function (object) {
-                var scroll = new Lampa.Scroll({ mask: true, over: true });
+    function init() {
+        // 1. ПЕРЕВІРКА: Виведемо повідомлення одразу, щоб ви знали, що код ЗАПУСТИВСЯ
+        setTimeout(function() {
+            if (window.Lampa) {
+                Lampa.Noty.show('UA-Plugin: Код працює, шукаю картку...');
+            }
+        }, 1000);
+
+        // 2. ЦИКЛ ПОШУКУ: Шукаємо місце для кнопки кожні пів секунди
+        setInterval(function() {
+            // Шукаємо блок кнопок у картці
+            var container = $('.full-start__buttons');
+            
+            if (container.length && !$('.view--ua-online').length) {
+                // Створюємо кнопку
+                var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
                 
-                this.create = function () {
-                    var _this = this;
-                    this.activity.loader(true);
-                    
-                    // Поки що тестовий список, щоб перевірити, чи відкривається вікно
-                    setTimeout(function(){
-                        _this.activity.loader(false);
-                        _this.draw([{title: 'Пошук налаштовується...'}]);
-                    }, 500);
+                // Дія при натисканні
+                btn.on('hover:enter click', function () {
+                    Lampa.Noty.show('Пошук активний!');
+                });
 
-                    return scroll.render();
-                };
+                // Додаємо в кінець списку кнопок
+                container.append(btn);
+                console.log('UA Online: Button added');
+            }
+        }, 500);
+    }
 
-                this.draw = function(data) {
-                    scroll.clear();
-                    data.forEach(function(item) {
-                        var card = Lampa.Template.get('button', { title: item.title });
-                        scroll.append(card);
-                    });
-                };
-            });
-
-            // Додаємо кнопку в картку фільму
-            Lampa.Listener.follow('full', function (e) {
-                if (e.type == 'complite') {
-                    var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
-                    
-                    btn.on('hover:enter', function () {
-                        Lampa.Activity.push({
-                            url: '',
-                            title: 'UA Онлайн',
-                            component: 'ua_online_mod',
-                            movie: Lampa.Activity.active().card
-                        });
-                    });
-                    
-                    if (!$('.view--ua-online').length) {
-                        $('.full-start__buttons').append(btn);
-                    }
-                }
-            });
-
-            Lampa.Noty.show('UA Онлайн: АКТИВОВАНО');
-        }
-
-        // Запускаємо логіку
-        startPlugin();
-    });
+    // Запуск скрипта
+    if (window.appready) init();
+    else {
+        document.addEventListener('appready', init);
+        setTimeout(init, 2000); // Резерв
+    }
 })();
