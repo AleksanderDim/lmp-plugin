@@ -2,39 +2,49 @@
     'use strict';
 
     function init() {
-        // Повідомлення для впевненості
-        Lampa.Noty.show('UA-Plugin: Шукаю куди вставити кнопку...');
+        Lampa.Noty.show('UA-Plugin: Інтеграція в меню...');
 
-        // Постійний цикл пошуку потрібного місця
-        setInterval(function() {
-            // Перевіряємо всі можливі варіанти назв блоків з кнопками в різних версіях Лампи
-            var selectors = [
-                '.full-start__buttons', 
-                '.movie-full__buttons', 
-                '.buttons--full',
-                '.full-buttons'
-            ];
-            
-            var container = $(selectors.join(', '));
-            
-            // Якщо знайшли хоча б один і кнопки там ще немає
-            if (container.length && !$('.view--ua-online').length) {
-                
-                // Створюємо кнопку з примусовими стилями, щоб її було видно
-                var btn = $('<div class="full-start__button selector view--ua-online" style="margin-bottom: 10px !important;"><span>UA Онлайн</span></div>');
-                
-                // Дія при натисканні
-                btn.on('hover:enter click', function () {
-                    Lampa.Noty.show('Пошук скоро буде тут!');
-                });
+        // Підключаємося до події відкриття картки фільму
+        Lampa.Listener.follow('full', function (e) {
+            if (e.type == 'complite') {
+                // Чекаємо мить, поки картка відмалюється
+                setTimeout(function() {
+                    // Шукаємо контейнер, де лежить кнопка "Джерело" та інші
+                    var container = $('.full-start__buttons, .movie-full__buttons, .buttons--full');
+                    
+                    if (container.length && !$('.view--ua-online').length) {
+                        // Створюємо кнопку, яка за стилем буде як "Джерело"
+                        var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
+                        
+                        btn.on('hover:enter click', function () {
+                            Lampa.Noty.show('Пошук UA джерел запущено...');
+                            // Тут пізніше буде виклик нашого вікна з результатами
+                        });
 
-                // Додаємо на самий початок списку кнопок, щоб не проґавити
-                container.prepend(btn);
-                
-                // Про всяк випадок оновлюємо навігацію Лампи, щоб кнопка стала "клікабельною"
-                Lampa.Controller.enable('full'); 
+                        // Вставляємо її ПЕРЕД кнопкою "Джерело"
+                        container.prepend(btn);
+                    }
+                }, 200);
             }
-        }, 1000);
+        });
+
+        // ДОДАТКОВО: Додаємо пункт прямо в меню "Джерело", якщо воно відкривається
+        Lampa.Listener.follow('modals', function (e) {
+            if (e.type == 'show' && e.name == 'select_source') {
+                // Якщо відкрилося вікно вибору джерела (торренти/трейлери)
+                setTimeout(function() {
+                    var modal = $('.modal--select_source .modal__content, .modal__list');
+                    if (modal.length && !$('.view--ua-item').length) {
+                        var item = $('<div class="modal__item selector view--ua-item"><div class="modal__item-title">Дивитися UA Онлайн</div></div>');
+                        item.on('hover:enter click', function() {
+                            Lampa.Modal.close();
+                            Lampa.Noty.show('Шукаю українською...');
+                        });
+                        modal.prepend(item);
+                    }
+                }, 100);
+            }
+        });
     }
 
     if (window.appready) init();
