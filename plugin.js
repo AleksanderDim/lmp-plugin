@@ -2,77 +2,68 @@
     'use strict';
 
     function startPlugin() {
-        // 1. Створюємо компонент за зразком Lampac
+        // 1. Реєструємо компонент вікна результатів
         Lampa.Component.add('ua_online_mod', function (object) {
             var scroll = new Lampa.Scroll({ mask: true, over: true });
-            
             this.create = function () {
                 var _this = this;
-                this.activity.loader(true);
-                
-                // Емуляція завантаження списку
-                setTimeout(function(){
-                    _this.activity.loader(false);
-                    var results = [
-                        {title: 'UA: Пошук на Anitube'},
-                        {title: 'UA: Пошук на UAKino'},
-                        {title: 'UA: Пошук на Ashdi'}
-                    ];
-                    _this.draw(results);
-                }, 800);
-
+                this.activity.loader(false);
+                scroll.clear();
+                var movieTitle = object.movie ? (object.movie.title || object.movie.name) : 'фільм';
+                var card = Lampa.Template.get('button', { title: 'Шукаємо UA джерела для: ' + movieTitle });
+                scroll.append(card);
                 return scroll.render();
             };
-
-            this.draw = function(data) {
-                scroll.clear();
-                data.forEach(function(item) {
-                    var card = Lampa.Template.get('button', { title: item.title });
-                    card.on('hover:enter', function() {
-                        Lampa.Noty.show('Скоро тут будуть прямі посилання!');
-                    });
-                    scroll.append(card);
-                });
-            };
         });
 
-        // 2. Метод додавання кнопки, який використовується в ядрі
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type == 'complite') {
-                var render = e.object.render(); // Отримуємо об'єкт картки
-                var container = render.find('.full-start__buttons');
-
-                if (container.length && !container.find('.view--ua-online').length) {
-                    // Створюємо кнопку з правильними класами Лампи
-                    var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
-                    
-                    btn.on('hover:enter', function () {
-                        Lampa.Activity.push({
-                            title: 'UA Онлайн',
-                            component: 'ua_online_mod',
-                            movie: e.data.movie
-                        });
+        // 2. ФУНКЦІЯ ВСТАВКИ КНОПКИ
+        function injectButton() {
+            var container = $('.full-start__buttons');
+            
+            // Якщо знайшли контейнер і кнопки там ще немає
+            if (container.length && !container.find('.view--ua-online').length) {
+                var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
+                
+                btn.on('hover:enter click', function () {
+                    Lampa.Activity.push({
+                        title: 'UA Онлайн',
+                        component: 'ua_online_mod',
+                        movie: Lampa.Activity.active() ? Lampa.Activity.active().card : {}
                     });
+                });
 
-                    // Додаємо в контейнер
-                    container.append(btn);
-                    
-                    // КРИТИЧНО: змушуємо ядро перерахувати навігацію в об'єкті
-                    if (e.object.navigation) e.object.navigation();
+                // Додаємо в самий початок
+                container.prepend(btn);
+                
+                // Оновлюємо навігацію, щоб пульт бачив кнопку
+                if (window.Lampa && Lampa.Controller) {
+                    Lampa.Controller.enable('full');
                 }
             }
+        }
+
+        // 3. МЕХАНІЗМ "НЕВИДИМОГО ОКА" (MutationObserver)
+        // Він буде стежити за змінами на екрані та вставляти кнопку автоматично
+        var observer = new MutationObserver(function(mutations) {
+            injectButton();
         });
 
-        Lampa.Noty.show('UA-Plugin: Завантажено як системний модуль');
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        // Запускаємо відразу для перевірки
+        injectButton();
+        
+        Lampa.Noty.show('UA-Plugin: Контроль інтерфейсу активовано');
     }
 
-    // Запуск через офіційний Listener, як у коді Lampac
-    Lampa.Listener.follow('app', function (e) {
-        if (e.type == 'ready') {
-            startPlugin();
-        }
-    });
-
-    // Резервний запуск для браузерів
+    // Запуск
     if (window.appready) startPlugin();
+    else {
+        document.addEventListener('appready', startPlugin);
+        // Резерв для ядра
+        setTimeout(startPlugin, 3000);
+    }
 })();
