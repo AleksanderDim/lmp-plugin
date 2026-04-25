@@ -2,60 +2,77 @@
     'use strict';
 
     function startPlugin() {
-        // 1. Реєструємо компонент (вікно з результатами)
+        // 1. Створюємо компонент за зразком Lampac
         Lampa.Component.add('ua_online_mod', function (object) {
             var scroll = new Lampa.Scroll({ mask: true, over: true });
+            
             this.create = function () {
                 var _this = this;
-                this.activity.loader(false);
-                scroll.clear();
-                var card = Lampa.Template.get('button', { 
-                    title: 'Пошук для: ' + (object.movie.title || object.movie.name) 
-                });
-                scroll.append(card);
+                this.activity.loader(true);
+                
+                // Емуляція завантаження списку
+                setTimeout(function(){
+                    _this.activity.loader(false);
+                    var results = [
+                        {title: 'UA: Пошук на Anitube'},
+                        {title: 'UA: Пошук на UAKino'},
+                        {title: 'UA: Пошук на Ashdi'}
+                    ];
+                    _this.draw(results);
+                }, 800);
+
                 return scroll.render();
+            };
+
+            this.draw = function(data) {
+                scroll.clear();
+                data.forEach(function(item) {
+                    var card = Lampa.Template.get('button', { title: item.title });
+                    card.on('hover:enter', function() {
+                        Lampa.Noty.show('Скоро тут будуть прямі посилання!');
+                    });
+                    scroll.append(card);
+                });
             };
         });
 
-        // 2. Використовуємо системний таймер для "впорскування"
-        // Це спрацює навіть якщо ядро перемальовує інтерфейс
-        setInterval(function() {
-            if ($('.full-start__buttons').length && !$('.view--ua-online').length) {
-                var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
-                
-                btn.on('hover:enter click', function () {
-                    // Отримуємо дані фільму безпосередньо з активної картки
-                    var active_card = Lampa.Activity.active().card;
-                    Lampa.Activity.push({
-                        url: '',
-                        title: 'UA Онлайн',
-                        component: 'ua_online_mod',
-                        movie: active_card
-                    });
-                });
+        // 2. Метод додавання кнопки, який використовується в ядрі
+        Lampa.Listener.follow('full', function (e) {
+            if (e.type == 'complite') {
+                var render = e.object.render(); // Отримуємо об'єкт картки
+                var container = render.find('.full-start__buttons');
 
-                // Додаємо кнопку
-                $('.full-start__buttons').append(btn);
-                
-                // Змушуємо Лампу перерахувати кнопки для пульта
-                if (Lampa.Controller.enabled().name == 'full') {
-                    Lampa.Controller.enable('full');
+                if (container.length && !container.find('.view--ua-online').length) {
+                    // Створюємо кнопку з правильними класами Лампи
+                    var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
+                    
+                    btn.on('hover:enter', function () {
+                        Lampa.Activity.push({
+                            title: 'UA Онлайн',
+                            component: 'ua_online_mod',
+                            movie: e.data.movie
+                        });
+                    });
+
+                    // Додаємо в контейнер
+                    container.append(btn);
+                    
+                    // КРИТИЧНО: змушуємо ядро перерахувати навігацію в об'єкті
+                    if (e.object.navigation) e.object.navigation();
                 }
             }
-        }, 1000);
+        });
 
-        Lampa.Noty.show('UA-Plugin: Спроба через системний цикл');
+        Lampa.Noty.show('UA-Plugin: Завантажено як системний модуль');
     }
 
-    // Офіційний метод запуску для ядра
-    if (window.appready) startPlugin();
-    else Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') startPlugin(); });
-    
-    // Резервний запуск
-    setTimeout(function() {
-        if (!window.UA_PLUGIN_INITED) {
+    // Запуск через офіційний Listener, як у коді Lampac
+    Lampa.Listener.follow('app', function (e) {
+        if (e.type == 'ready') {
             startPlugin();
-            window.UA_PLUGIN_INITED = true;
         }
-    }, 3000);
+    });
+
+    // Резервний запуск для браузерів
+    if (window.appready) startPlugin();
 })();
