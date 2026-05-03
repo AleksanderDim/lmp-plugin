@@ -2,62 +2,44 @@
     'use strict';
 
     function startPlugin() {
-        // 1. Реєструємо компонент вікна результатів, який не конфліктує з BwaRC
-        Lampa.Component.add('ua_online_mod', function (object) {
-            var scroll = new Lampa.Scroll({ mask: true, over: true });
+        // Перевіряємо, чи існує вже зареєстрований компонент bwarch, щоб не зламати інші плагіни
+        if (window.Lampa && Lampa.Component && Lampa.Component.get('bwarch')) {
+            // Перехоплюємо створення компонента або додаємо нову логіку
+            var originalBwarch = Lampa.Component.get('bwarch');
             
-            this.create = function () {
-                var _this = this;
-                this.activity.loader(false);
-                scroll.clear();
+            Lampa.Component.add('bwarch', function (object) {
+                var instance = new originalBwarch(object);
 
-                var movieTitle = object.movie ? (object.movie.title || object.movie.name) : 'фільм';
-                
-                var card = Lampa.Template.get('button', { title: 'Джерела для: ' + movieTitle });
-                scroll.append(card);
+                // Якщо ми хочемо додати UAKino в список джерел (якщо компонент це дозволяє)
+                var oldCreate = instance.create;
+                instance.create = function () {
+                    var rendered = oldCreate.apply(this, arguments);
 
-                var btnSrc = Lampa.Template.get('button', { title: 'UAKino' });
-                btnSrc.on('hover:enter click', function () {
-                    window.open('https://uakino.club', '_blank');
-                });
-                
-                scroll.append(btnSrc);
-
-                return scroll.render();
-            };
-        });
-
-        // 2. Додаємо пункт у меню вибору (без спроби вклинитися у full-start__buttons)
-        function addMenuItem() {
-            var $menuList = $('.menu .menu__list, .torrent-filter'); 
-
-            // Створюємо кнопку меню, якщо її ще немає
-            if (!$('.view--ua-online-menu').length) {
-                var menuBtn = $('<div class="menu__item selector view--ua-online-menu"><span>UAKino Онлайн</span></div>');
-                
-                menuBtn.on('hover:enter click', function () {
-                    var activeActivity = Lampa.Activity.active();
-                    var activeMovie = activeActivity ? activeActivity.card : null;
-
-                    Lampa.Activity.push({
-                        title: 'UA Онлайн',
-                        component: 'ua_online_mod',
-                        movie: activeMovie
+                    // Додаємо власну кнопку дочірнього меню всередині вікна bwarch
+                    var btnUa = Lampa.Template.get('button', { title: 'UAKino (UA Онлайн)' });
+                    btnUa.on('hover:enter click', function () {
+                        window.open('https://uakino.club', '_blank');
                     });
-                });
 
-                // Додаємо кнопку до загального меню Lampa
-                if ($menuList.length) {
-                    $menuList.first().append(menuBtn);
-                } else {
-                    // Резервний варіант: якщо меню не знайдено, виводимо сповіщення
-                    $('.menu__items').append(menuBtn);
-                }
-            }
+                    // Шукаємо місце, куди можна вставити (наприклад, панель кнопок)
+                    var $panel = rendered.find('.torrent-filter, .filter');
+                    if ($panel.length) {
+                        $panel.append(btnUa);
+                    } else {
+                        rendered.append(btnUa);
+                    }
+
+                    return rendered;
+                };
+
+                return instance;
+            });
+            
+            Lampa.Noty.show('UA-Plugin: Інтеграцію з BwaRC активовано');
+        } else {
+            Lampa.Noty.show('UA-Plugin: BwaRC ще не ініціалізовано. Спроба 2...');
+            setTimeout(startPlugin, 2000);
         }
-
-        setTimeout(addMenuItem, 3000);
-        Lampa.Noty.show('UA-Plugin: UAKino ініціалізовано');
     }
 
     if (window.appready) {
