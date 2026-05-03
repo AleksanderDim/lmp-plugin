@@ -12,14 +12,20 @@
                 
                 var movieTitle = object.movie ? (object.movie.title || object.movie.name) : 'фільм';
                 
-                // Перевіряємо список джерел перед виведенням
+                // Перевіряємо список джерел
                 var uaSources = getSourcesForMovie(object.movie);
                 
                 if (uaSources.length > 0) {
                     var card = Lampa.Template.get('button', { title: 'Знайдено UA джерела для: ' + movieTitle });
                     scroll.append(card);
-                    // Тут ви можете додати список результатів/посилань, наприклад, через цикл:
-                    // uaSources.forEach(function(source) { ... });
+                    
+                    uaSources.forEach(function(source) {
+                        var btnSrc = Lampa.Template.get('button', { title: source.title });
+                        btnSrc.on('hover:enter click', function () {
+                            window.open(source.url, '_blank'); // Відкриваємо у браузері або плеєрі
+                        });
+                        scroll.append(btnSrc);
+                    });
                 } else {
                     var emptyCard = Lampa.Template.get('button', { title: 'Немає доступних UA джерел для: ' + movieTitle });
                     scroll.append(emptyCard);
@@ -29,10 +35,7 @@
             };
         });
 
-        // Допоміжна функція для отримання джерел (тут ви можете додати реальну логіку парсингу)
         function getSourcesForMovie(movie) {
-            // У реальному сценарії тут можна робити запит або перевіряти масив:
-            // Для прикладу, повертаємо фіктивний масив, якщо фільм взагалі існує
             if (movie) {
                 return [
                     { title: 'UAKino', url: 'https://uakino.club' }
@@ -41,41 +44,38 @@
             return [];
         }
 
-        // 2. ФУНКЦІЯ ВСТАВКИ КНОПКИ З ПЕРЕВІРКОЮ
+        // 2. Вставка кнопки з безпечною перевіркою
         function injectButton() {
             var container = $('.full-start__buttons');
             var activeMovie = Lampa.Activity.active() ? Lampa.Activity.active().card : null;
 
-            // Перевіряємо, чи є для цього фільму джерела
-            var sources = getSourcesForMovie(activeMovie);
-
-            // Якщо є контейнер і джерела, і кнопки ще немає
-            if (container.length && sources.length > 0 && !container.find('.view--ua-online').length) {
-                var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
+            if (container.length && !container.find('.view--ua-online').length) {
+                var sources = getSourcesForMovie(activeMovie);
                 
-                btn.on('hover:enter click', function () {
-                    Lampa.Activity.push({
-                        title: 'UA Онлайн',
-                        component: 'ua_online_mod',
-                        movie: activeMovie
+                if (sources.length > 0) {
+                    var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
+                    
+                    btn.on('hover:enter click', function () {
+                        Lampa.Activity.push({
+                            title: 'UA Онлайн',
+                            component: 'ua_online_mod',
+                            movie: activeMovie
+                        });
                     });
-                });
 
-                // Додаємо в самий початок
-                container.prepend(btn);
-                
-                // Оновлюємо навігацію, щоб пульт бачив кнопку
-                if (window.Lampa && Lampa.Controller) {
-                    Lampa.Controller.enable('full');
+                    container.prepend(btn);
+                    
+                    if (window.Lampa && Lampa.Controller) {
+                        Lampa.Controller.enable('full');
+                    }
                 }
-            }
-            // Якщо джерел немає або вони порожні — ховаємо (якщо вона вже була створена раніше)
-            else if (sources.length === 0) {
-                container.find('.view--ua-online').remove();
             }
         }
 
-        // 3. МЕХАНІЗМ "НЕВИДИМОГО ОКА" (MutationObserver)
+        // 3. Відкладений запуск для коректної ініціалізації
+        setTimeout(injectButton, 2000);
+
+        // 4. Механізм відстеження зміни сторінок
         var observer = new MutationObserver(function(mutations) {
             injectButton();
         });
@@ -84,18 +84,13 @@
             childList: true,
             subtree: true
         });
-
-        // Запускаємо відразу для перевірки
-        injectButton();
         
         Lampa.Noty.show('UA-Plugin: Контроль інтерфейсу активовано');
     }
 
-    // Запуск
     if (window.appready) startPlugin();
     else {
         document.addEventListener('appready', startPlugin);
-        // Резерв для ядра
         setTimeout(startPlugin, 3000);
     }
 })();
