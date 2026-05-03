@@ -1,51 +1,58 @@
 (function () {
     'use strict';
 
-    function startPlugin() {
-        // Перевіряємо, чи існує вже зареєстрований компонент bwarch, щоб не зламати інші плагіни
-        if (window.Lampa && Lampa.Component && Lampa.Component.get('bwarch')) {
-            // Перехоплюємо створення компонента або додаємо нову логіку
-            var originalBwarch = Lampa.Component.get('bwarch');
-            
-            Lampa.Component.add('bwarch', function (object) {
-                var instance = new originalBwarch(object);
-
-                // Якщо ми хочемо додати UAKino в список джерел (якщо компонент це дозволяє)
-                var oldCreate = instance.create;
-                instance.create = function () {
-                    var rendered = oldCreate.apply(this, arguments);
-
-                    // Додаємо власну кнопку дочірнього меню всередині вікна bwarch
-                    var btnUa = Lampa.Template.get('button', { title: 'UAKino (UA Онлайн)' });
-                    btnUa.on('hover:enter click', function () {
-                        window.open('https://uakino.club', '_blank');
-                    });
-
-                    // Шукаємо місце, куди можна вставити (наприклад, панель кнопок)
-                    var $panel = rendered.find('.torrent-filter, .filter');
-                    if ($panel.length) {
-                        $panel.append(btnUa);
-                    } else {
-                        rendered.append(btnUa);
-                    }
-
-                    return rendered;
-                };
-
-                return instance;
-            });
-            
-            Lampa.Noty.show('UA-Plugin: Інтеграцію з BwaRC активовано');
-        } else {
-            Lampa.Noty.show('UA-Plugin: BwaRC ще не ініціалізовано. Спроба 2...');
-            setTimeout(startPlugin, 2000);
+    function addUAPlugin() {
+        // Переконуємось, що Lampa та головне меню існують
+        if (!window.Lampa || !Lampa.Main) {
+            setTimeout(addUAPlugin, 2000);
+            return;
         }
+
+        // Реєструємо наш окремий компонент, який відкриває список/браузер UAKino
+        Lampa.Component.add('ua_online_mod', function (object) {
+            var scroll = new Lampa.Scroll({ mask: true, over: true });
+
+            this.create = function () {
+                this.activity.loader(false);
+                scroll.clear();
+
+                var card = Lampa.Template.get('button', { title: 'UAKino: Перегляд' });
+                scroll.append(card);
+
+                var btnWatch = Lampa.Template.get('button', { title: 'Відкрити сайт UAKino' });
+                btnWatch.on('hover:enter click', function () {
+                    window.open('https://uakino.club', '_blank');
+                });
+
+                scroll.append(btnWatch);
+
+                return scroll.render();
+            };
+        });
+
+        // Створюємо пункт у головному меню
+        var menuElement = $('<div class="menu__item selector" data-action="ua_online"><span>UA Онлайн (UAKino)</span></div>');
+
+        menuElement.on('hover:enter click', function () {
+            Lampa.Activity.push({
+                title: 'UA Онлайн',
+                component: 'ua_online_mod',
+                movie: { title: 'UAKino' }
+            });
+        });
+
+        // Додаємо елемент до списку меню
+        $('.menu__list, .menu .scroll').append(menuElement);
+        
+        Lampa.Noty.show('UA-Plugin: Меню UAKino успішно додано');
     }
 
+    // Запуск
     if (window.appready) {
-        startPlugin();
+        addUAPlugin();
     } else {
-        document.addEventListener('appready', startPlugin);
-        setTimeout(startPlugin, 3500);
+        document.addEventListener('appready', addUAPlugin);
+        // Захист від затримок завантаження
+        setTimeout(addUAPlugin, 3500);
     }
 })();
