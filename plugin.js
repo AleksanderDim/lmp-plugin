@@ -1,23 +1,21 @@
 (function () {
     'use strict';
 
-    function registerPlugin() {
-        // Реєструємо наш компонент у системі Lampa
+    function startPlugin() {
+        // 1. Реєструємо компонент вікна результатів, який не конфліктує з BwaRC
         Lampa.Component.add('ua_online_mod', function (object) {
-            var _this = this;
             var scroll = new Lampa.Scroll({ mask: true, over: true });
-            var files = new Lampa.Explorer(object); // Використовуємо стандартний провідник Lampa
-
+            
             this.create = function () {
-                var movieTitle = object.movie ? (object.movie.title || object.movie.name) : 'фільм';
-
+                var _this = this;
                 this.activity.loader(false);
                 scroll.clear();
 
-                var card = Lampa.Template.get('button', { title: 'Знайдено джерела для: ' + movieTitle });
+                var movieTitle = object.movie ? (object.movie.title || object.movie.name) : 'фільм';
+                
+                var card = Lampa.Template.get('button', { title: 'Джерела для: ' + movieTitle });
                 scroll.append(card);
 
-                // Додаємо кнопку з посиланням
                 var btnSrc = Lampa.Template.get('button', { title: 'UAKino' });
                 btnSrc.on('hover:enter click', function () {
                     window.open('https://uakino.club', '_blank');
@@ -27,38 +25,45 @@
 
                 return scroll.render();
             };
-
-            this.start = function () {
-                Lampa.Controller.enable('content');
-            };
-
-            this.pause = function () {};
-            this.stop = function () {};
         });
 
-        // Додаємо пункт у головне меню Lampa (наприклад, у розділ "Пошук" або "Головна")
-        if (window.Lampa && Lampa.Main) {
-            var menuElement = $('<div class="menu__item selector" data-action="ua_online_mod"><span>UA Онлайн</span></div>');
+        // 2. Додаємо пункт у меню вибору (без спроби вклинитися у full-start__buttons)
+        function addMenuItem() {
+            var $menuList = $('.menu .menu__list, .torrent-filter'); 
 
-            menuElement.on('hover:enter', function () {
-                Lampa.Activity.push({
-                    title: 'UA Онлайн',
-                    component: 'ua_online_mod',
-                    movie: { title: 'Пошук' }
+            // Створюємо кнопку меню, якщо її ще немає
+            if (!$('.view--ua-online-menu').length) {
+                var menuBtn = $('<div class="menu__item selector view--ua-online-menu"><span>UAKino Онлайн</span></div>');
+                
+                menuBtn.on('hover:enter click', function () {
+                    var activeActivity = Lampa.Activity.active();
+                    var activeMovie = activeActivity ? activeActivity.card : null;
+
+                    Lampa.Activity.push({
+                        title: 'UA Онлайн',
+                        component: 'ua_online_mod',
+                        movie: activeMovie
+                    });
                 });
-            });
 
-            // Додаємо кнопку в меню (якщо воно завантажилось)
-            $('.menu .menu__list').append(menuElement);
-            
-            Lampa.Noty.show('UA-Plugin: Меню успішно додано');
+                // Додаємо кнопку до загального меню Lampa
+                if ($menuList.length) {
+                    $menuList.first().append(menuBtn);
+                } else {
+                    // Резервний варіант: якщо меню не знайдено, виводимо сповіщення
+                    $('.menu__items').append(menuBtn);
+                }
+            }
         }
+
+        setTimeout(addMenuItem, 3000);
+        Lampa.Noty.show('UA-Plugin: UAKino ініціалізовано');
     }
 
     if (window.appready) {
-        registerPlugin();
+        startPlugin();
     } else {
-        document.addEventListener('appready', registerPlugin);
-        setTimeout(registerPlugin, 3500);
+        document.addEventListener('appready', startPlugin);
+        setTimeout(startPlugin, 3500);
     }
 })();
