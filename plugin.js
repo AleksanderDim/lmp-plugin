@@ -1,82 +1,64 @@
 (function () {
     'use strict';
 
-    function initPlugin() {
-        // Реєструємо компонент для відображення списку або інформації
+    function registerPlugin() {
+        // Реєструємо наш компонент у системі Lampa
         Lampa.Component.add('ua_online_mod', function (object) {
+            var _this = this;
             var scroll = new Lampa.Scroll({ mask: true, over: true });
-            
+            var files = new Lampa.Explorer(object); // Використовуємо стандартний провідник Lampa
+
             this.create = function () {
-                var _this = this;
+                var movieTitle = object.movie ? (object.movie.title || object.movie.name) : 'фільм';
+
                 this.activity.loader(false);
                 scroll.clear();
-
-                // Отримуємо назву фільму
-                var movieTitle = object.movie ? (object.movie.title || object.movie.name) : 'фільм';
 
                 var card = Lampa.Template.get('button', { title: 'Знайдено джерела для: ' + movieTitle });
                 scroll.append(card);
 
+                // Додаємо кнопку з посиланням
                 var btnSrc = Lampa.Template.get('button', { title: 'UAKino' });
                 btnSrc.on('hover:enter click', function () {
-                    // Відкриваємо джерело
                     window.open('https://uakino.club', '_blank');
                 });
+                
                 scroll.append(btnSrc);
 
                 return scroll.render();
             };
+
+            this.start = function () {
+                Lampa.Controller.enable('content');
+            };
+
+            this.pause = function () {};
+            this.stop = function () {};
         });
 
-        // Функція для пошуку контейнера кнопок та вставки нової
-        function injectButton() {
-            // Шукаємо блок з діями (кнопки "Дивитись", "Трейлер" тощо)
-            var $container = $('.full-start__buttons');
-            var activeActivity = Lampa.Activity.active();
-            var activeMovie = activeActivity ? activeActivity.card : null;
+        // Додаємо пункт у головне меню Lampa (наприклад, у розділ "Пошук" або "Головна")
+        if (window.Lampa && Lampa.Main) {
+            var menuElement = $('<div class="menu__item selector" data-action="ua_online_mod"><span>UA Онлайн</span></div>');
 
-            if ($container.length && !$container.find('.view--ua-online').length) {
-                var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
-
-                btn.on('hover:enter click', function () {
-                    Lampa.Activity.push({
-                        title: 'UA Онлайн',
-                        component: 'ua_online_mod',
-                        movie: activeMovie
-                    });
+            menuElement.on('hover:enter', function () {
+                Lampa.Activity.push({
+                    title: 'UA Онлайн',
+                    component: 'ua_online_mod',
+                    movie: { title: 'Пошук' }
                 });
+            });
 
-                $container.prepend(btn);
-
-                if (window.Lampa && Lampa.Controller) {
-                    Lampa.Controller.enable('full');
-                }
-                
-                Lampa.Noty.show('UA-Plugin: Кнопка активована');
-            }
+            // Додаємо кнопку в меню (якщо воно завантажилось)
+            $('.menu .menu__list').append(menuElement);
+            
+            Lampa.Noty.show('UA-Plugin: Меню успішно додано');
         }
-
-        // Запускаємо через 3.5 секунди після завантаження для стабільності
-        setTimeout(injectButton, 3500);
-
-        // Відстежуємо зміни сторінок
-        var observer = new MutationObserver(function (mutations) {
-            injectButton();
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-        
-        Lampa.Noty.show('UA-Plugin: Ініціалізовано');
     }
 
-    // Запуск плагіна з перевіркою стану Lampa
     if (window.appready) {
-        initPlugin();
+        registerPlugin();
     } else {
-        document.addEventListener('appready', initPlugin);
-        setTimeout(initPlugin, 3500);
+        document.addEventListener('appready', registerPlugin);
+        setTimeout(registerPlugin, 3500);
     }
 })();
