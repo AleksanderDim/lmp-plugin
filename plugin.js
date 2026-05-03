@@ -2,59 +2,37 @@
     'use strict';
 
     function startPlugin() {
-        // 1. Реєструємо компонент вікна результатів
+        // 1. Реєструємо компонент
         Lampa.Component.add('ua_online_mod', function (object) {
             var scroll = new Lampa.Scroll({ mask: true, over: true });
             this.create = function () {
                 var _this = this;
                 this.activity.loader(false);
                 scroll.clear();
-                
-                var movieTitle = object.movie ? (object.movie.title || object.movie.name) : 'фільм';
-                
-                // Перевіряємо список джерел
-                var uaSources = getSourcesForMovie(object.movie);
-                
-                if (uaSources.length > 0) {
-                    var card = Lampa.Template.get('button', { title: 'Знайдено UA джерела для: ' + movieTitle });
-                    scroll.append(card);
-                    
-                    uaSources.forEach(function(source) {
-                        var btnSrc = Lampa.Template.get('button', { title: source.title });
-                        btnSrc.on('hover:enter click', function () {
-                            window.open(source.url, '_blank'); // Відкриваємо у браузері або плеєрі
-                        });
-                        scroll.append(btnSrc);
-                    });
-                } else {
-                    var emptyCard = Lampa.Template.get('button', { title: 'Немає доступних UA джерел для: ' + movieTitle });
-                    scroll.append(emptyCard);
-                }
+
+                var card = Lampa.Template.get('button', { title: 'UA Онлайн: Меню працює' });
+                scroll.append(card);
 
                 return scroll.render();
             };
         });
 
-        function getSourcesForMovie(movie) {
-            if (movie) {
-                return [
-                    { title: 'UAKino', url: 'https://uakino.club' }
-                ];
-            }
-            return [];
-        }
-
-        // 2. Вставка кнопки з безпечною перевіркою
+        // 2. Розширена функція вставки кнопки
         function injectButton() {
-            var container = $('.full-start__buttons');
-            var activeMovie = Lampa.Activity.active() ? Lampa.Activity.active().card : null;
+            // Перевіряємо одразу кілька можливих контейнерів для кнопок у різних версіях Lampa
+            var containers = [
+                $('.full-start__buttons'),
+                $('.full-start__actions'),
+                $('.view--item .info__actions')
+            ];
 
-            if (container.length && !container.find('.view--ua-online').length) {
-                var sources = getSourcesForMovie(activeMovie);
-                
-                if (sources.length > 0) {
+            var activeActivity = Lampa.Activity.active();
+            var activeMovie = activeActivity ? activeActivity.card : null;
+
+            containers.forEach(function ($container) {
+                if ($container.length && !$container.find('.view--ua-online').length) {
                     var btn = $('<div class="full-start__button selector view--ua-online"><span>UA Онлайн</span></div>');
-                    
+
                     btn.on('hover:enter click', function () {
                         Lampa.Activity.push({
                             title: 'UA Онлайн',
@@ -63,20 +41,22 @@
                         });
                     });
 
-                    container.prepend(btn);
-                    
+                    $container.prepend(btn);
+
                     if (window.Lampa && Lampa.Controller) {
                         Lampa.Controller.enable('full');
                     }
+                    
+                    Lampa.Noty.show('UA Онлайн: Кнопку додано!');
                 }
-            }
+            });
         }
 
-        // 3. Відкладений запуск для коректної ініціалізації
-        setTimeout(injectButton, 2000);
+        // Запускаємо з більшою затримкою, щоб сторінка встигла повністю промалюватися
+        setTimeout(injectButton, 3500);
 
-        // 4. Механізм відстеження зміни сторінок
-        var observer = new MutationObserver(function(mutations) {
+        // Відстежуємо зміни в інтерфейсі (якщо користувач перемикає фільми)
+        var observer = new MutationObserver(function (mutations) {
             injectButton();
         });
 
@@ -84,13 +64,14 @@
             childList: true,
             subtree: true
         });
-        
-        Lampa.Noty.show('UA-Plugin: Контроль інтерфейсу активовано');
+
+        Lampa.Noty.show('UA-Plugin: Ініціалізовано');
     }
 
-    if (window.appready) startPlugin();
-    else {
+    if (window.appready) {
+        startPlugin();
+    } else {
         document.addEventListener('appready', startPlugin);
-        setTimeout(startPlugin, 3000);
+        setTimeout(startPlugin, 3500);
     }
 })();
