@@ -1,35 +1,40 @@
 (function () {
     'use strict';
 
-    function manualPlugin() {
-        if (window.Lampa && Lampa.Platform) {
-            Lampa.Noty.show('UAKino: Запуск модуля...');
+    function runHook() {
+        if (!window.Lampa) {
+            setTimeout(runHook, 2000);
+            return;
+        }
 
-            // Відкриваємо сайт UAKino у вбудованому браузері або через вікно Lampa
-            try {
-                if (Lampa.Activity) {
-                    Lampa.Activity.push({
-                        title: 'UAKino Онлайн',
-                        url: 'https://uakino.club',
-                        component: 'full', // Використовуємо стандартний компонент перегляду Lampa
-                        movie: {
-                            title: 'UAKino',
-                            name: 'UAKino'
-                        }
+        Lampa.Noty.show('UAKino: Перехоплення пошуку...');
+
+        // Перехоплюємо введення в пошуковому рядку
+        if (Lampa.Search) {
+            var originalSearch = Lampa.Search.search;
+            
+            Lampa.Search.search = function (query) {
+                // Викликаємо оригінальний пошук, щоб не ламати інші функції
+                originalSearch.apply(this, arguments);
+
+                // Якщо пошук містить запит, додаємо кнопку переходу на сайт
+                var $panel = $('.search__results');
+                if ($panel.length && !$('.uakino-search-btn').length) {
+                    var btn = $('<div class="button selector uakino-search-btn" style="margin-top:10px; background:#e50914; color:#fff; text-align:center; padding:10px;"><span>Знайти на UAKino.club</span></div>');
+                    
+                    btn.on('hover:enter click', function () {
+                        window.open('https://uakino.club/index.php?do=search&subaction=search&story=' + encodeURIComponent(query), '_blank');
                     });
+                    
+                    $panel.prepend(btn);
                 }
-            } catch (e) {
-                // Якщо ядро заблоковано, використовуємо системний метод
-                window.open('https://uakino.club', '_blank');
-            }
+            };
         }
     }
 
-    // Запускаємо відразу після ініціалізації
     if (window.appready) {
-        manualPlugin();
+        runHook();
     } else {
-        document.addEventListener('appready', manualPlugin);
-        setTimeout(manualPlugin, 4000);
+        document.addEventListener('appready', runHook);
     }
 })();
