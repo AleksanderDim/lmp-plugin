@@ -1,63 +1,58 @@
 (function () {
     'use strict';
 
-    function registerUaPlugin() {
+    function createUaPlugin() {
         if (!window.Lampa) {
-            setTimeout(registerUaPlugin, 2000);
+            setTimeout(createUaPlugin, 2000);
             return;
         }
 
-        // 1. Створюємо незалежний компонент
-        Lampa.Component.add('ua_online_mod', function (object) {
+        // 1. Створюємо абсолютно новий, ізольований компонент
+        Lampa.Component.add('ua_online_uakino', function (object) {
             var scroll = new Lampa.Scroll({ mask: true, over: true });
 
             this.create = function () {
                 this.activity.loader(false);
                 scroll.clear();
 
-                // Заголовок вікна
-                var card = Lampa.Template.get('button', { title: 'UAKino: Вибір джерел' });
+                var card = Lampa.Template.get('button', { title: 'UAKino: Перегляд та медіатека' });
                 scroll.append(card);
 
-                // Кнопка, яка відкриває сайт у браузері телевізора або медіаплеєрі
-                var btn = Lampa.Template.get('button', { title: 'Відкрити UAKino' });
-                btn.on('hover:enter click', function () {
+                var btnSite = Lampa.Template.get('button', { title: 'Відкрити сайт UAKino' });
+                btnSite.on('hover:enter click', function () {
                     window.open('https://uakino.club', '_blank');
                 });
-                scroll.append(btn);
+
+                scroll.append(btnSite);
 
                 return scroll.render();
             };
         });
 
-        // 2. Додаємо пункт до головного меню (використовуємо інший клас для запобігання конфліктам)
-        var menuItem = $('<div class="menu__item selector" data-action="ua_online_mod"><span>UAKino (UA Онлайн)</span></div>');
+        // 2. Додаємо пункт в головне меню через хук ініціалізації Lampa
+        Lampa.listener.follow('app', function (e) {
+            if (e.type === 'ready') {
+                var btn = $('<div class="menu__item selector" data-action="ua_online_uakino"><span>UAKino (UA)</span></div>');
 
-        menuItem.on('hover:enter click', function () {
-            Lampa.Activity.push({
-                title: 'UAKino',
-                component: 'ua_online_mod',
-                movie: { title: 'UAKino' }
-            });
+                btn.on('hover:enter click', function () {
+                    Lampa.Activity.push({
+                        title: 'UAKino Онлайн',
+                        component: 'ua_online_uakino',
+                        movie: { title: 'UAKino' }
+                    });
+                });
+
+                // Використовуємо контейнер для бічного меню додатку Lampa
+                $('.menu__list').append(btn);
+            }
         });
 
-        // Безпечна вставка в меню
-        var $menuContainer = $('.menu .menu__list');
-        if ($menuContainer.length) {
-            $menuContainer.append(menuItem);
-        } else {
-            // Резервний варіант для інших версій
-            $('.menu__list').append(menuItem);
-        }
-
-        Lampa.Noty.show('UAKino: Плагін успішно ініціалізовано');
+        Lampa.Noty.show('UAKino: Модуль ініціалізовано в обхід BwaRC');
     }
 
-    // Запускаємо при готовності Lampa
     if (window.appready) {
-        registerUaPlugin();
+        createUaPlugin();
     } else {
-        document.addEventListener('appready', registerUaPlugin);
-        setTimeout(registerUaPlugin, 4000);
+        document.addEventListener('appready', createUaPlugin);
     }
 })();
